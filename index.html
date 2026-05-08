@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우리 주위 순물질을 구분하자!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
+        
+        body { 
+            font-family: 'Noto Sans KR', sans-serif; 
+            background-color: #f8fafc; 
+            display: flex; 
+            flex-direction: column; 
+            min-height: 100vh;
+        }
+        
+        .main-container { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            padding: 1rem; 
+            max-width: 1400px; 
+            margin: 0 auto; 
+            width: 100%; 
+            box-sizing: border-box; 
+            gap: 1rem;
+        }
+
+        /* 드롭존 높이 및 모바일 스크롤 대응 */
+        .drop-zone { 
+            flex: 1;
+            min-height: 150px; 
+            transition: all 0.3s; 
+            border: 3px dashed #cbd5e1; 
+            border-radius: 1.5rem; 
+            background: rgba(255,255,255,0.5); 
+            display: flex; 
+            flex-direction: column; 
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .drop-zone.over { border-color: #3b82f6; background-color: #eff6ff; }
+        
+        .item-card { cursor: grab; user-select: none; transition: all 0.3s; z-index: 10; }
+        .item-card.selected {
+            border-color: #4f46e5 !important;
+            background-color: #eef2ff !important;
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
+        }
+        
+        .canvas-area { 
+            position: relative; 
+            width: 100%; 
+            height: 260px;
+            background: #ffffff; 
+            border-radius: 1.5rem; 
+            overflow: hidden; 
+            border: 2px solid #e2e8f0; 
+            flex-shrink: 0;
+        }
+        
+        .particle { 
+            position: absolute; 
+            border-radius: 50%; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            color: white; 
+            font-weight: bold; 
+            z-index: 20; 
+            pointer-events: none; 
+        }
+        
+        .main-emoji { font-size: 6rem; transition: all 0.6s; position: absolute; z-index: 30; }
+        .main-emoji.zoom-out { transform: scale(0) rotate(180deg); opacity: 0; }
+        
+        .step-active { border-bottom: 4px solid #4f46e5; color: #4f46e5; font-weight: 700; }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-2px, 2px); }
+        }
+        .particle-move { animation: float 1.5s ease-in-out infinite; }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out infinite; }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <header class="text-center shrink-0">
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 mb-2">🧪 우리 주위 순물질을 구분하자!</h1>
+            <nav class="flex justify-center gap-6 md:gap-10 text-sm md:text-lg text-slate-400">
+                <div id="step1-tab" class="pb-1 step-active">1. 분류하기</div>
+                <div id="step2-tab" class="pb-1">2. 정답 확인</div>
+                <div id="step3-tab" class="pb-1">3. 물질 확인</div>
+            </nav>
+        </header>
+
+        <!-- 물질 선반 -->
+        <div id="source-shelf" class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 shrink-0">
+            <div class="flex flex-wrap gap-2 justify-center" id="source-items"></div>
+            <div id="action-area" class="mt-4 flex flex-col items-center gap-3">
+                <div id="alert-msg" class="hidden text-red-600 font-bold animate-shake text-center">⚠️ 잘못 분류된 물질이 있습니다. 다시 확인해 보세요!</div>
+                <!-- 버튼 겹침 방지를 위해 flex-wrap 추가 -->
+                <div class="flex flex-wrap justify-center gap-3 w-full">
+                    <button id="check-btn" onclick="checkAnswers()" class="bg-indigo-600 text-white px-6 md:px-10 py-3 rounded-full font-bold hover:bg-indigo-700 shadow-md transition text-base md:text-lg">결과 확인하기</button>
+                    <button onclick="resetAll()" class="bg-slate-200 text-slate-600 px-6 md:px-10 py-3 rounded-full font-bold hover:bg-slate-300 transition text-base md:text-lg">초기화</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 메인 학습 영역 -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1">
+            <!-- 왼쪽: 사이드바 (원소) -->
+<div class="lg:col-span-1 flex flex-col h-full min-h-0">
+    <div id="zone-element" class="drop-zone" ondrop="handleDrop(event, 'element')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+        <!-- 아래 h2 태그를 교체: whitespace-nowrap 추가로 줄바꿈 방지 -->
+        <h2 class="text-xs md:text-sm font-bold text-blue-700 mb-3 text-center whitespace-nowrap">💎 다른 종류의 입자로 분해되지 않는 것</h2>
+        <div class="flex flex-wrap gap-2 justify-center w-full overflow-y-auto" id="container-element"></div>
+    </div>
+</div>
+
+            <!-- 시각화 영역 -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+                <div class="canvas-area flex items-center justify-center" id="canvas">
+                    <div id="canvas-msg" class="absolute inset-0 flex items-center justify-center text-slate-400 text-center px-6 italic text-sm md:text-base">
+                        정답 확인 후 물질을 클릭하면 입자 구조가 나타납니다.
+                    </div>
+                </div>
+                <div id="info-panel" class="hidden bg-white p-4 rounded-3xl border-2 border-indigo-100 shadow-xl shrink-0">
+                    <div class="flex items-center gap-4">
+                        <div id="info-type-icon" class="text-4xl p-2 bg-slate-50 rounded-full"></div>
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <h3 id="info-name" class="text-xl font-bold"></h3>
+                                <span id="info-formula" class="bg-slate-800 text-white px-2 py-0.5 rounded text-xs font-mono"></span>
+                            </div>
+                            <p id="info-type-text" class="text-xs font-bold"></p>
+                            <p id="info-desc" class="text-slate-700 text-sm mt-1"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 오른쪽: 사이드바 (화합물) -->
+<div class="lg:col-span-1 flex flex-col h-full min-h-0">
+    <div id="zone-compound" class="drop-zone" ondrop="handleDrop(event, 'compound')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
+        <!-- 아래 h2 태그를 교체: whitespace-nowrap 추가로 줄바꿈 방지 -->
+        <h2 class="text-xs md:text-sm font-bold text-orange-700 mb-3 text-center whitespace-nowrap">🧩 다른 종류의 입자로 분해되는 것</h2>
+        <div class="flex flex-wrap gap-2 justify-center w-full overflow-y-auto" id="container-compound"></div>
+    </div>
+</div>
+        </div>
+    </div>
+
+    <script>
+        const materials = {
+    water: { 
+        id: 'water', name: "물", emoji: "💧", formula: "H₂O", type: "compound", layout: "liquid", 
+        particles: [{ s: "O", c: "#FF4500", x:0, y:0 }, { s: "H", c: "#87CEEB", x:-20, y:15 }, { s: "H", c: "#87CEEB", x:20, y:15 }], 
+        desc: "물은 산소 입자 1개와 수소 입자 2개가 결합한 분자들로 구성된 화합물입니다." 
+    },
+    oxygen: { 
+        id: 'oxygen', name: "산소", emoji: "💨", formula: "O₂", type: "element", layout: "gas", 
+        particles: [{ s: "O", c: "#FF4500", x:-15, y:0 }, { s: "O", c: "#FF4500", x:15, y:0 }], 
+        desc: "산소는 같은 종류인 산소 입자 2개가 결합하여 하나의 분자를 이룹니다." 
+    },
+    hydrogen: { 
+        id: 'hydrogen', name: "수소", emoji: "🎈", formula: "H₂", type: "element", layout: "gas", 
+        particles: [{ s: "H", c: "#87CEEB", x:-12, y:0 }, { s: "H", c: "#87CEEB", x:12, y:0 }], 
+        desc: "수소는 수소 입자 2개가 결합한 분자 상태로 존재합니다." 
+    },
+    gold: { 
+        id: 'gold', name: "금반지", emoji: "💍", formula: "Au", type: "element", layout: "solid-grid", 
+        particles: [{ s: "Au", c: "#FFD700", x:0, y:0 }], 
+        desc: "금은 한 종류의 입자들이 규칙적으로 매우 빽빽하게 배열되어 있습니다." 
+    },
+    salt: { 
+        id: 'salt', name: "소금", emoji: "🧂", formula: "NaCl", type: "compound", layout: "ionic-grid", 
+        particles: [{ s: "Na", c: "#9370DB", x:0, y:0 }, { s: "Cl", c: "#32CD32", x:0, y:0 }], 
+        desc: "소금은 나트륨 입자와 염소 입자가 규칙적으로 결합하여 구성된 화합물입니다." 
+    },
+    sugar: { 
+        id: 'sugar', name: "설탕", emoji: "🍬", formula: "C₁₂H₂₂O₁₁", type: "compound", layout: "molecular-solid", 
+        particles: [{ s: "C", c: "#333333", x:0, y:0 }, { s: "H", c: "#87CEEB", x:-20, y:12 }, { s: "O", c: "#FF4500", x:20, y:12 }], 
+        desc: "설탕은 탄소, 수소, 산소 입자들이 복잡하게 결합한 분자들로 구성된 화합물입니다." 
+    },
+    aluminum: { 
+        id: 'aluminum', name: "알루미늄 캔", emoji: "🥫", formula: "Al", type: "element", layout: "solid-grid", 
+        particles: [{ s: "Al", c: "#C0C0C0", x:0, y:0 }], 
+        desc: "알루미늄 입자들이 규칙적으로 배열되어 금속을 이룹니다." 
+    },
+    diamond: { 
+        id: 'diamond', name: "다이아몬드", emoji: "💎", formula: "C", type: "element", layout: "diamond-grid", 
+        particles: [{ s: "C", c: "#555555", x:0, y:0 }], 
+        desc: "탄소 입자들이 입체적으로 매우 강하게 연결되어 있습니다." 
+    },
+    plastic: { 
+        id: 'plastic', name: "플라스틱", emoji: "🥤", formula: "고분자", type: "compound", layout: "polymer", 
+        particles: [{ s: "C", c: "#333333", x:0, y:0 }, { s: "H", c: "#87CEEB", x:0, y:20 }], 
+        desc: "플라스틱은 탄소와 수소 입자들이 사슬처럼 길게 연결되어 만들어진 화합물입니다." 
+    },
+    nitrogen: { 
+        id: 'nitrogen', name: "질소", emoji: "🌬️", formula: "N₂", type: "element", layout: "gas", 
+        particles: [{ s: "N", c: "#4169E1", x:-15, y:0 }, { s: "N", c: "#4169E1", x:15, y:0 }], 
+        desc: "질소 입자 2개가 결합한 분자들이 공기 중에 퍼져 있습니다." 
+    },
+    dryice: { 
+        id: 'dryice', name: "드라이아이스", emoji: "❄️", formula: "CO₂", type: "compound", layout: "molecular-solid", 
+        particles: [{ s: "C", c: "#333333", x:0, y:0 }, { s: "O", c: "#FF4500", x:-25, y:0 }, { s: "O", c: "#FF4500", x:25, y:0 }], 
+        desc: "탄소 입자 1개와 산소 입자 2개가 결합한 이산화 탄소 분자들이 모여 구성된 화합물입니다." 
+    }
+};
+
+        let currentStep = 1;
+        let animationTimers = [];
+        let activeCard = null; // 터치 변수 선언 위치 수정
+
+        function init() {
+            const shelf = document.getElementById('source-items');
+            shelf.innerHTML = '';
+            document.getElementById('container-element').innerHTML = '';
+            document.getElementById('container-compound').innerHTML = '';
+            
+            Object.values(materials).forEach(m => {
+                const card = document.createElement('div');
+                card.id = m.id;
+                card.draggable = true;
+                card.dataset.placed = ""; 
+                card.className = 'item-card bg-white border-2 border-slate-200 p-2 rounded-2xl shadow-sm font-bold text-slate-700 text-center min-w-[100px] text-xs';
+                card.innerHTML = `<span class="text-xl block mb-1">${m.emoji}</span>${m.name}`;
+                
+                card.ondragstart = (e) => {
+                    e.dataTransfer.setData("text", e.target.id);
+                    document.getElementById('alert-msg').classList.add('hidden');
+                };
+
+                card.addEventListener('touchstart', handleTouchStart, { passive: false });
+                card.addEventListener('touchmove', handleTouchMove, { passive: false });
+                card.addEventListener('touchend', handleTouchEnd, { passive: false });
+                
+                shelf.appendChild(card);
+            });
+            updateTabs();
+        }
+
+        // 터치 핸들러 로직 (기능 복구)
+        function handleTouchStart(e) {
+            if (currentStep === 3) return;
+            activeCard = e.currentTarget;
+            activeCard.style.zIndex = '100';
+            document.getElementById('alert-msg').classList.add('hidden');
+        }
+
+        function handleTouchMove(e) {
+            if (!activeCard) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            activeCard.style.position = 'fixed';
+            activeCard.style.left = (touch.clientX - activeCard.offsetWidth / 2) + 'px';
+            activeCard.style.top = (touch.clientY - activeCard.offsetHeight / 2) + 'px';
+            activeCard.style.opacity = '0.7';
+        }
+
+        function handleTouchEnd(e) {
+            if (!activeCard) return;
+            activeCard.style.opacity = '1';
+            activeCard.style.position = 'static';
+            activeCard.style.zIndex = '10';
+
+            const touch = e.changedTouches[0];
+            const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+            
+            const zE = document.getElementById('zone-element');
+            const zC = document.getElementById('zone-compound');
+
+            if (zE && (zE.contains(targetElement) || targetElement === zE)) {
+                handleDropManual(activeCard, 'element');
+            } else if (zC && (zC.contains(targetElement) || targetElement === zC)) {
+                handleDropManual(activeCard, 'compound');
+            }
+            activeCard = null;
+        }
+
+        function handleDropManual(card, zoneType) {
+            const container = document.getElementById(`container-${zoneType}`);
+            if (container) {
+                container.appendChild(card);
+                card.dataset.placed = zoneType;
+            }
+        }
+
+        // 기존 기능 유지
+        function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('over'); }
+        function dragLeave(ev) { ev.currentTarget.classList.remove('over'); }
+        function handleDrop(ev, zoneType) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('over');
+            const id = ev.dataTransfer.getData("text");
+            const card = document.getElementById(id);
+            if(card) {
+                ev.currentTarget.querySelector('div').appendChild(card);
+                card.dataset.placed = zoneType;
+            }
+        }
+
+        function updateTabs() {
+            ['step1', 'step2', 'step3'].forEach((s, i) => {
+                const tab = document.getElementById(`${s}-tab`);
+                if(tab) tab.className = currentStep === (i+1) ? 'pb-1 step-active' : 'pb-1 text-slate-400';
+            });
+        }
+
+        function checkAnswers() {
+            let incorrectCount = 0;
+            let placedCount = 0;
+            const allItems = Object.values(materials);
+
+            allItems.forEach(m => {
+                const card = document.getElementById(m.id);
+                if (card.dataset.placed) {
+                    placedCount++;
+                    if (card.dataset.placed !== m.type) incorrectCount++;
+                }
+            });
+
+            if (incorrectCount > 0 || placedCount < allItems.length) {
+                document.getElementById('alert-msg').classList.remove('hidden');
+                currentStep = 1;
+            } else {
+                document.getElementById('alert-msg').classList.add('hidden');
+                document.getElementById('canvas-msg').innerHTML = "✨ 모든 분류가 정확합니다!<br>물질을 클릭하여 입자 구조를 확인해보세요.";
+                currentStep = 3;
+                
+                allItems.forEach(m => {
+                    const card = document.getElementById(m.id);
+                    card.classList.add('border-green-500', 'bg-green-50', 'text-green-700');
+                    card.draggable = false;
+                    card.onclick = () => {
+                        document.querySelectorAll('.item-card').forEach(c => c.classList.remove('selected'));
+                        card.classList.add('selected');
+                        showMatterEffect(m.id);
+                    };
+                });
+            }
+            updateTabs();
+        }
+
+        function clearCanvas() {
+            animationTimers.forEach(t => {
+                if (t.type === 'timeout') clearTimeout(t.id);
+                if (t.type === 'interval') clearInterval(t.id);
+            });
+            animationTimers = [];
+            const canvas = document.getElementById('canvas');
+            canvas.querySelectorAll('.particle, .main-emoji, .absolute:not(#canvas-msg)').forEach(p => p.remove());
+            document.getElementById('info-panel').classList.add('hidden');
+        }
+
+        function createParticle(s, c, x, y, size = 32) {
+            const p = document.createElement('div');
+            p.className = 'particle particle-move';
+            p.style.cssText = `width:${size}px; height:${size}px; background-color:${c}; left:${x}px; top:${y}px; font-size:${size*0.4}px; opacity:0;`;
+            p.innerText = s;
+            return p;
+        }
+
+        function showMatterEffect(id) {
+            const item = materials[id];
+            const canvas = document.getElementById('canvas');
+            clearCanvas();
+            document.getElementById('canvas-msg').classList.add('hidden');
+
+            const emojiEl = document.createElement('div');
+            emojiEl.className = 'main-emoji';
+            emojiEl.innerText = item.emoji;
+            canvas.appendChild(emojiEl);
+
+            const timer1 = setTimeout(() => {
+                emojiEl.classList.add('zoom-out');
+                const info = document.getElementById('info-panel');
+                document.getElementById('info-name').innerText = item.name;
+                document.getElementById('info-formula').innerText = item.formula;
+                document.getElementById('info-desc').innerHTML = item.desc;
+                document.getElementById('info-type-text').innerText = item.type === 'element' ? '원소 (한 종류의 입자로 구성)' : '화합물 (두 종류 이상의 입자 결합)';
+                document.getElementById('info-type-text').className = `text-xs font-bold ${item.type === 'element' ? 'text-blue-500' : 'text-orange-500'}`;
+                document.getElementById('info-type-icon').innerText = item.type === 'element' ? '💎' : '🧩';
+                info.classList.remove('hidden');
+
+                const W = canvas.clientWidth;
+                const H = canvas.clientHeight;
+
+                // 입자 배치 로직 (기존 유지)
+                if (item.layout === 'solid-grid' || item.layout === 'diamond-grid') {
+                    for(let i=0; i<5; i++) for(let j=0; j<3; j++) {
+                        const p = createParticle(item.particles[0].s, item.particles[0].c, (W/2 - 100) + i*40, (H/2 - 50) + j*40, 38);
+                        canvas.appendChild(p);
+                        const t = setTimeout(() => p.style.opacity = '1', (i+j)*50);
+                        animationTimers.push({id: t, type: 'timeout'});
+                    }
+                } else if (item.layout === 'gas') {
+                    for(let i=0; i<4; i++) {
+                        const ox = Math.random() * (W-80) + 40;
+                        const oy = Math.random() * (H-80) + 40;
+                        const group = document.createElement('div');
+                        group.className = 'absolute transition-all duration-[3000ms]';
+                        group.style.left = `${ox}px`; group.style.top = `${oy}px`;
+                        item.particles.forEach(pd => {
+                            const p = createParticle(pd.s, pd.c, pd.x, pd.y, 28);
+                            group.appendChild(p);
+                            setTimeout(() => p.style.opacity = '1', 100);
+                        });
+                        canvas.appendChild(group);
+                        const interval = setInterval(() => {
+                            group.style.transform = `translate(${(Math.random()-0.5)*60}px, ${(Math.random()-0.5)*60}px)`;
+                        }, 2000);
+                        animationTimers.push({id: interval, type: 'interval'});
+                    }
+                } else if (item.layout === 'liquid' || item.layout === 'molecular-solid') {
+                    for(let i=0; i<5; i++) {
+                        const ox = (W/2 - 80) + (i%3)*70;
+                        const oy = (H/2 - 40) + Math.floor(i/3)*60;
+                        item.particles.forEach(pd => {
+                            const p = createParticle(pd.s, pd.c, ox + pd.x, oy + pd.y, 28);
+                            canvas.appendChild(p);
+                            setTimeout(() => p.style.opacity = '1', i*100);
+                        });
+                    }
+                } else if (item.layout === 'ionic-grid') {
+                    for(let i=0; i<5; i++) for(let j=0; j<3; j++) {
+                        const isCl = (i+j)%2 === 0;
+                        const p = createParticle(isCl ? "Cl" : "Na", isCl ? "#32CD32" : "#9370DB", (W/2 - 100) + i*40, (H/2 - 50) + j*40, isCl ? 40 : 30);
+                        canvas.appendChild(p);
+                        setTimeout(() => p.style.opacity = '1', (i+j)*50);
+                    }
+                } else if (item.layout === 'polymer') {
+                    for(let i=0; i<8; i++) {
+                        const px = (W/2 - 140) + i*35;
+                        const py = (H/2);
+                        const c = createParticle("C", "#333333", px, py, 32);
+                        const h = createParticle("H", "#87CEEB", px, py - 22, 20);
+                        canvas.appendChild(c); canvas.appendChild(h);
+                        setTimeout(() => { c.style.opacity = '1'; h.style.opacity = '1'; }, i*80);
+                    }
+                }
+            }, 600);
+            animationTimers.push({id: timer1, type: 'timeout'});
+        }
+
+        function resetAll() {
+            currentStep = 1;
+            clearCanvas();
+            document.getElementById('canvas-msg').classList.remove('hidden');
+            document.getElementById('canvas-msg').innerHTML = "정답 확인 후 물질을 클릭하면 입자 구조가 나타납니다.";
+            document.getElementById('alert-msg').classList.add('hidden');
+            init(); 
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
