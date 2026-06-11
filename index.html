@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>우리 주위 순물질을 구분하자!</title>
+    <title>어떤 종류의 입자로 이루어져 있을까?</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700&display=swap');
@@ -95,7 +95,7 @@
 <body>
     <div class="main-container">
         <header class="text-center shrink-0">
-            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 mb-2">🧪 우리 주위 순물질을 구분하자!</h1>
+            <h1 class="text-2xl md:text-3xl font-bold text-slate-800 mb-2">🧪 어떤 종류의 입자로 이루어져 있을까?</h1>
             <nav class="flex justify-center gap-6 md:gap-10 text-sm md:text-lg text-slate-400">
                 <div id="step1-tab" class="pb-1 step-active">1. 분류하기</div>
                 <div id="step2-tab" class="pb-1">2. 정답 확인</div>
@@ -122,7 +122,7 @@
 <div class="lg:col-span-1 flex flex-col h-full min-h-0">
     <div id="zone-element" class="drop-zone" ondrop="handleDrop(event, 'element')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
         <!-- 아래 h2 태그를 교체: whitespace-nowrap 추가로 줄바꿈 방지 -->
-        <h2 class="text-xs md:text-sm font-bold text-blue-700 mb-3 text-center whitespace-nowrap">💎 다른 종류의 입자로 분해되지 않는 것</h2>
+        <h2 class="text-xs md:text-sm font-bold text-blue-700 mb-3 text-center whitespace-nowrap">💎 한 종류의 입자로 이루어진 물질</h2>
         <div class="flex flex-wrap gap-2 justify-center w-full overflow-y-auto" id="container-element"></div>
     </div>
 </div>
@@ -153,7 +153,7 @@
 <div class="lg:col-span-1 flex flex-col h-full min-h-0">
     <div id="zone-compound" class="drop-zone" ondrop="handleDrop(event, 'compound')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)">
         <!-- 아래 h2 태그를 교체: whitespace-nowrap 추가로 줄바꿈 방지 -->
-        <h2 class="text-xs md:text-sm font-bold text-orange-700 mb-3 text-center whitespace-nowrap">🧩 다른 종류의 입자로 분해되는 것</h2>
+        <h2 class="text-xs md:text-sm font-bold text-orange-700 mb-3 text-center whitespace-nowrap">🧩 여러 종류의 입자로 이루어진 물질</h2>
         <div class="flex flex-wrap gap-2 justify-center w-full overflow-y-auto" id="container-compound"></div>
     </div>
 </div>
@@ -336,7 +336,7 @@
                 currentStep = 1;
             } else {
                 document.getElementById('alert-msg').classList.add('hidden');
-                document.getElementById('canvas-msg').innerHTML = "✨ 모든 분류가 정확합니다!<br>물질을 클릭하여 입자 구조를 확인해보세요.";
+                document.getElementById('canvas-msg').innerHTML = "✨ 모든 분류가 정확합니다!<br>물질을 클릭하여 입자의 모습을 확인해보세요.";
                 currentStep = 3;
                 
                 allItems.forEach(m => {
